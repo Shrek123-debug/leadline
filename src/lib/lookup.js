@@ -128,10 +128,10 @@ export function worstEntry(entries) {
 
 export const MATERIAL_LABELS = {
   L: "Lead",
-  U: "Unknown \u2014 suspected lead",
+  U: "Unknown — suspected lead",
   UNL: "Unknown, but not lead",
   C: "Copper",
-  GRR: "Galvanized \u2014 needs replacement",
+  GRR: "Galvanized — needs replacement",
   O: "Cast/ductile iron",
 };
 
