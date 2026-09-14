@@ -37,8 +37,10 @@ RULES:
 - If writing to a landlord: request testing and, if lead is found, replacement, and reference their responsibility for the building's plumbing.
 - If writing to an alderman: request help accessing the city's testing/replacement programs and faster action in the neighborhood.
 - If this is a 311 complaint record rather than a letter to a person: skip a "Dear ___" salutation, write it as a clear factual complaint report (what's happening, at what address, what's being requested), and still close with the resident's contact info as a signature block.
-${isEscalation ? `- This is a FOLLOW-UP. An earlier request was already sent about two weeks ago and has NOT received a response. Say so plainly and firmly, without inventing specifics about what happened — only use what's in the resident's own note below, if anything. The tone should be noticeably firmer and more urgent than a first request, while staying respectful and factual.` : ""}
-- End with a signature line (translated into ${outputLanguage} if not English) as [Your name] / [Address] / [Date]. Output only the letter text, nothing else.
+${isEscalation ? `- This is a FOLLOW-UP. An earlier request was already sent about two weeks ago and has NOT received a response. Say so plainly and firmly, without inventing specifics about what happened — only use what's in the resident's own note below, if anything. The tone should be noticeably firmer and more urgent than a first request, while staying respectful and factual.
+- The resident's own note (if provided) may be written in English or Spanish regardless of the requested output language. Read it for meaning and incorporate it into the ${outputLanguage} letter naturally — never quote it in a different language than the rest of the letter.
+- After the letter, on a new line, add exactly one short sentence recommending what the resident should do if THIS attempt also gets no response — e.g. escalating further, involving a tenant rights organization, or a formal 311 complaint. Base it only on the verified facts and the situation given, not invented specifics. The sentence content should be in ${outputLanguage}, but it MUST start with the literal marker text "NEXT STEP:" exactly as written here, in English, even when the rest of the letter is in Spanish — this marker is parsed by code, not read by the resident.` : ""}
+- End with a signature line (translated into ${outputLanguage} if not English) as [Your name] / [Address] / [Date]. Output only the letter text${isEscalation ? " (plus the one NEXT STEP line described above)" : ""}, nothing else.
 
 VERIFIED FACTS:
 ${verifiedFacts}`;
@@ -89,10 +91,20 @@ ${verifiedFacts}`;
       return { statusCode: 502, body: JSON.stringify({ error: "Empty response" }) };
     }
 
+    // Pull the "NEXT STEP:" line (English or Spanish label) out of the
+    // letter body so the UI can show it as a separate callout.
+    let letterText = text;
+    let suggestion = "";
+    const nextStepMatch = text.match(/\n?(NEXT STEP:.*)$/is);
+    if (nextStepMatch) {
+      suggestion = nextStepMatch[1].replace(/^NEXT STEP:\s*/i, "").trim();
+      letterText = text.slice(0, nextStepMatch.index).trim();
+    }
+
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ letter: text }),
+      body: JSON.stringify({ letter: letterText, suggestion }),
     };
   } catch (err) {
     console.error(err);

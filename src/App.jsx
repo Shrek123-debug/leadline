@@ -35,8 +35,14 @@ export default function App() {
 
   const [extraNote, setExtraNote] = useState("");
   const [escalationLetter, setEscalationLetter] = useState("");
+  const [escalationSuggestion, setEscalationSuggestion] = useState("");
   const [escalationLoading, setEscalationLoading] = useState(false);
   const [escalationErr, setEscalationErr] = useState("");
+
+  const [chatLog, setChatLog] = useState([]); // [{role:'user'|'assistant', text}]
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatErr, setChatErr] = useState("");
 
   const [copyState, setCopyState] = useState(""); // "link" | "summary" | ""
   const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
@@ -98,8 +104,11 @@ export default function App() {
     setLetter("");
     setLetterErr("");
     setEscalationLetter("");
+    setEscalationSuggestion("");
     setEscalationErr("");
     setExtraNote("");
+    setChatLog([]);
+    setChatErr("");
     setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
   }
 
@@ -163,12 +172,21 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(situation),
       });
-      if (!res.ok) throw new Error("bad response");
+      if (!res.ok) {
+        let detail = `status ${res.status}`;
+        try {
+          const errBody = await res.json();
+          if (errBody?.error) detail = errBody.error;
+        } catch {
+          /* response wasn't JSON, keep the status-code detail */
+        }
+        throw new Error(detail);
+      }
       const data = await res.json();
-      if (!data.letter) throw new Error("empty");
+      if (!data.letter) throw new Error("empty response");
       setLetter(data.letter);
     } catch (e) {
-      setLetterErr(t.letter.error);
+      setLetterErr(`${t.letter.error} (${e.message})`);
     } finally {
       setLetterLoading(false);
     }
@@ -202,14 +220,70 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(situation),
       });
-      if (!res.ok) throw new Error("bad response");
+      if (!res.ok) {
+        let detail = `status ${res.status}`;
+        try {
+          const errBody = await res.json();
+          if (errBody?.error) detail = errBody.error;
+        } catch {
+          /* response wasn't JSON, keep the status-code detail */
+        }
+        throw new Error(detail);
+      }
       const data = await res.json();
-      if (!data.letter) throw new Error("empty");
+      if (!data.letter) throw new Error("empty response");
       setEscalationLetter(data.letter);
+      setEscalationSuggestion(data.suggestion || "");
     } catch (e) {
-      setEscalationErr(t.letter.error);
+      setEscalationErr(`${t.letter.error} (${e.message})`);
     } finally {
       setEscalationLoading(false);
+    }
+  }
+
+  async function askQuestion() {
+    const question = chatInput.trim();
+    if (!question || !isOnline || chatLoading) return;
+    setChatLoading(true);
+    setChatErr("");
+    const nextLog = [...chatLog, { role: "user", text: question }];
+    setChatLog(nextLog);
+    setChatInput("");
+
+    try {
+      const res = await fetch("/.netlify/functions/ask-question", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question,
+          resultLabel: cat.label,
+          resultHeadline: cat.headline,
+          address,
+          tenure,
+          kids,
+          pregnant,
+          language: lang === "es" ? "Spanish" : "English",
+          verifiedFacts: VERIFIED_FACTS,
+          history: nextLog,
+        }),
+      });
+      if (!res.ok) {
+        let detail = `status ${res.status}`;
+        try {
+          const errBody = await res.json();
+          if (errBody?.error) detail = errBody.error;
+        } catch {
+          /* not JSON, keep status detail */
+        }
+        throw new Error(detail);
+      }
+      const data = await res.json();
+      if (!data.answer) throw new Error("empty response");
+      setChatLog([...nextLog, { role: "assistant", text: data.answer }]);
+    } catch (e) {
+      setChatErr(`${t.chat.error} (${e.message})`);
+    } finally {
+      setChatLoading(false);
     }
   }
 
@@ -429,6 +503,39 @@ export default function App() {
                 )}
               </div>
 
+              {catKey !== "invalid" && (
+                <div className="ll-chat">
+                  <h2 className="ll-h2">{t.chat.heading}</h2>
+                  <p className="ll-chat-sub">{t.chat.sub}</p>
+
+                  {chatLog.length > 0 && (
+                    <div className="ll-chat-log">
+                      {chatLog.map((m, i) => (
+                        <div key={i} className={"ll-chat-msg " + m.role}>
+                          {m.text}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {chatErr && <p className="ll-err">{chatErr}</p>}
+
+                  <div className="ll-chat-input-row">
+                    <input
+                      className="ll-input"
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && askQuestion()}
+                      placeholder={t.chat.placeholder}
+                      disabled={!isOnline || chatLoading}
+                    />
+                    <button className="ll-go" onClick={askQuestion} disabled={!isOnline || chatLoading || !chatInput.trim()}>
+                      {!isOnline ? t.chat.offline : chatLoading ? t.chat.asking : t.chat.send}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {atRisk && (
                 <div className="ll-letter">
                   <h2 className="ll-h2">{t.letter.heading}</h2>
@@ -510,6 +617,11 @@ export default function App() {
                               <button className="ll-ghost" onClick={copyEscalation}>{t.letter.copy}</button>
                               <button className="ll-ghost" onClick={emailEscalation}>{t.letter.email}</button>
                             </div>
+                            {escalationSuggestion && (
+                              <p className="ll-next-step">
+                                <strong>{t.letter.nextStepLabel}</strong> {escalationSuggestion}
+                              </p>
+                            )}
                           </>
                         )}
                       </div>

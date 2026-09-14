@@ -77,6 +77,16 @@ export const STRINGS = {
       escalateToComplaint: "Generate a formal 311 complaint",
       escalating: "Writing your escalation letter…",
       escalateAgain: "Rewrite escalation letter",
+      nextStepLabel: "Suggested next step:",
+    },
+    chat: {
+      heading: "Ask about your result",
+      sub: "Answers are limited to your result and verified city facts — not medical advice.",
+      placeholder: "e.g. Can I still shower normally?",
+      send: "Ask",
+      asking: "Thinking…",
+      error: "Couldn't get an answer just now. Try again.",
+      offline: "Requires an internet connection",
     },
     footer: {
       attribution:
@@ -190,6 +200,16 @@ export const STRINGS = {
       escalateToComplaint: "Generar una queja formal al 311",
       escalating: "Escribiendo su carta de escalamiento…",
       escalateAgain: "Reescribir carta de escalamiento",
+      nextStepLabel: "Siguiente paso sugerido:",
+    },
+    chat: {
+      heading: "Pregunte sobre su resultado",
+      sub: "Las respuestas se limitan a su resultado y a datos verificados de la ciudad — no son consejo médico.",
+      placeholder: "por ejemplo, ¿puedo ducharme normalmente?",
+      send: "Preguntar",
+      asking: "Pensando…",
+      error: "No se pudo obtener una respuesta en este momento. Intente de nuevo.",
+      offline: "Requiere conexión a internet",
     },
     footer: {
       attribution:

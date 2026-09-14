@@ -118,6 +118,19 @@ body{margin:0;}
 .ll-bar-fill{height:100%;background:var(--water2);border-radius:100px;transition:width .4s ease;}
 .ll-bar-fill.muted{background:#9fb0aa;}
 
+.ll-chat{margin-top:34px;}
+.ll-chat-sub{font-size:13.5px;color:var(--muted);margin:6px 0 16px;max-width:60ch;}
+.ll-chat-log{display:flex;flex-direction:column;gap:10px;margin-bottom:14px;}
+.ll-chat-msg{font-size:14.5px;padding:10px 14px;border-radius:10px;max-width:80%;line-height:1.5;}
+.ll-chat-msg.user{background:var(--ink);color:var(--paper);align-self:flex-end;}
+.ll-chat-msg.assistant{background:#fff;border:1px solid var(--line);align-self:flex-start;}
+.ll-chat-input-row{display:flex;gap:10px;}
+.ll-chat-input-row .ll-input{padding:12px 14px;font-size:14.5px;}
+.ll-chat-input-row .ll-go{padding:12px 18px;font-size:14.5px;}
+
+.ll-next-step{font-size:13.5px;color:#bcd3d7;margin:14px 0 0;line-height:1.5;}
+.ll-next-step strong{color:#f4b23e;}
+
 .ll-h2{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:23px;letter-spacing:-.01em;margin:34px 0 4px;}
 .ll-plan{margin-top:8px;}
 .ll-steps{margin:14px 0 0;padding-left:22px;}
