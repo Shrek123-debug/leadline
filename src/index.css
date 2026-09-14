@@ -127,6 +127,25 @@ body{margin:0;}
 .ll-bar-fill{height:100%;background:var(--water2);border-radius:100px;transition:width .4s ease;}
 .ll-bar-fill.muted{background:#9fb0aa;}
 
+.ll-verdict-word-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.ll-priority-badge{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;
+  padding:4px 10px;border-radius:100px;}
+.ll-priority-badge.prio-high{background:#f7ded9;color:var(--danger);}
+.ll-priority-badge.prio-medium{background:#fdf0d5;color:var(--warn);}
+.ll-priority-badge.prio-low{background:#dcefe2;color:var(--safe);}
+
+.ll-qr-panel{display:flex;flex-direction:column;align-items:flex-start;gap:10px;margin-top:14px;
+  padding:16px;background:#fff;border:1px solid var(--line);border-radius:3px;width:fit-content;}
+
+.ll-notice{margin-top:34px;}
+.ll-notice-upload{display:flex;align-items:center;justify-content:center;min-height:90px;
+  border:1.5px dashed var(--line);border-radius:4px;cursor:pointer;padding:14px;
+  font-size:14px;color:var(--water2);text-align:center;background:#fff;}
+.ll-notice-upload:hover{border-color:var(--water2);}
+.ll-notice-preview{max-height:220px;max-width:100%;border-radius:3px;}
+.ll-notice-explanation{margin-top:14px;font-size:14.5px;line-height:1.6;background:#fff;
+  border:1px solid var(--line);border-radius:3px;padding:14px 16px;max-width:65ch;}
+
 .ll-chat{margin-top:34px;}
 .ll-chat-sub{font-size:13.5px;color:var(--muted);margin:6px 0 16px;max-width:60ch;}
 .ll-chat-log{display:flex;flex-direction:column;gap:10px;margin-bottom:14px;}

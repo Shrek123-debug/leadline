@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { lookupAddress, worstEntry, MATERIAL_LABELS, CLASS_LABELS } from "./lib/lookup.js";
-import { STRINGS, TONES, contextSentence, actionPlanSteps } from "./lib/i18n.js";
+import { STRINGS, TONES, contextSentence, actionPlanSteps, priorityLevel, PRIORITY_LABELS } from "./lib/i18n.js";
 import ChicagoMap from "./components/ChicagoMap.jsx";
+import { letterToPdf, summaryToPdf } from "./lib/pdf.js";
+import { resizeImageFile } from "./lib/image.js";
+import { makeQrDataUrl } from "./lib/qr.js";
 
 const VERIFIED_FACTS = `
 - Chicago has more lead service lines than any U.S. city (an estimated 400,000+ still in the ground).
@@ -46,6 +49,15 @@ export default function App() {
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [chatErr, setChatErr] = useState("");
+
+  const [showQr, setShowQr] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState("");
+
+  const [noticeFile, setNoticeFile] = useState(null);
+  const [noticePreview, setNoticePreview] = useState("");
+  const [noticeExplanation, setNoticeExplanation] = useState("");
+  const [noticeLoading, setNoticeLoading] = useState(false);
+  const [noticeErr, setNoticeErr] = useState("");
 
   const [copyState, setCopyState] = useState(""); // "link" | "summary" | ""
   const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
@@ -119,6 +131,12 @@ export default function App() {
     setExtraNote("");
     setChatLog([]);
     setChatErr("");
+    setShowQr(false);
+    setQrDataUrl("");
+    setNoticeFile(null);
+    setNoticePreview("");
+    setNoticeExplanation("");
+    setNoticeErr("");
     setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
   }
 
@@ -345,11 +363,96 @@ export default function App() {
     URL.revokeObjectURL(url);
   }
 
+  function buildShareUrl() {
+    return `${window.location.origin}${window.location.pathname}?address=${encodeURIComponent(address)}`;
+  }
+
   function shareLink() {
-    const url = `${window.location.origin}${window.location.pathname}?address=${encodeURIComponent(address)}`;
-    navigator.clipboard?.writeText(url);
+    navigator.clipboard?.writeText(buildShareUrl());
     setCopyState("link");
     setTimeout(() => setCopyState(""), 2000);
+  }
+
+  async function toggleQr() {
+    if (!showQr) {
+      const dataUrl = await makeQrDataUrl(buildShareUrl());
+      setQrDataUrl(dataUrl);
+    }
+    setShowQr(!showQr);
+  }
+
+  function downloadQr() {
+    const a = document.createElement("a");
+    a.href = qrDataUrl;
+    a.download = "leadline-qr.png";
+    a.click();
+  }
+
+  async function downloadLetterPdf(text, heading) {
+    await letterToPdf(text, { filename: "leadline-letter.pdf", heading });
+  }
+
+  async function downloadSummaryPdf() {
+    await summaryToPdf({
+      address,
+      resultLabel: cat.label,
+      resultHeadline: cat.headline,
+      steps: actionPlanSteps(lang, { catKey, kids, pregnant, tenure }),
+      areaInfo,
+      citywide,
+      attribution:
+        lang === "es"
+          ? "Datos: inventario de líneas de servicio del Departamento de Manejo de Agua de Chicago (abril de 2025), vía Inside Climate News, WBEZ y Grist. leadline.app"
+          : "Data: Chicago Dept. of Water Management service line inventory (April 2025), via Inside Climate News, WBEZ, and Grist. leadline.app",
+      lang,
+    });
+  }
+
+  function handleNoticeFile(e) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setNoticeFile(f);
+    setNoticePreview(URL.createObjectURL(f));
+    setNoticeExplanation("");
+    setNoticeErr("");
+  }
+
+  async function explainNotice() {
+    if (!noticeFile || !isOnline || noticeLoading) return;
+    setNoticeLoading(true);
+    setNoticeErr("");
+    setNoticeExplanation("");
+    try {
+      const { base64, mediaType } = await resizeImageFile(noticeFile);
+      const res = await fetch("/.netlify/functions/explain-notice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageBase64: base64,
+          mediaType,
+          language: lang === "es" ? "Spanish" : "English",
+          verifiedFacts: VERIFIED_FACTS,
+          address,
+        }),
+      });
+      if (!res.ok) {
+        let detail = `status ${res.status}`;
+        try {
+          const errBody = await res.json();
+          if (errBody?.error) detail = errBody.error;
+        } catch {
+          /* not JSON */
+        }
+        throw new Error(detail);
+      }
+      const data = await res.json();
+      if (!data.explanation) throw new Error("empty response");
+      setNoticeExplanation(data.explanation);
+    } catch (e) {
+      setNoticeErr(`${t.notice.error} (${e.message})`);
+    } finally {
+      setNoticeLoading(false);
+    }
   }
 
   function copySummary() {
@@ -449,7 +552,14 @@ export default function App() {
             <section className="ll-result" ref={resultRef}>
               <div className={"ll-verdict tone-" + cat.tone}>
                 <div className="ll-verdict-top">
-                  <div className="ll-verdict-word">{cat.label}</div>
+                  <div className="ll-verdict-word-row">
+                    <div className="ll-verdict-word">{cat.label}</div>
+                    {catKey !== "invalid" && (
+                      <span className={"ll-priority-badge prio-" + priorityLevel(catKey, kids, pregnant)}>
+                        {PRIORITY_LABELS[lang][priorityLevel(catKey, kids, pregnant)]}
+                      </span>
+                    )}
+                  </div>
                   <span className="ll-snapshot-tag">
                     {lang === "es" ? "Datos al" : "Data as of"} {t.dateLabel}
                   </span>
@@ -465,7 +575,17 @@ export default function App() {
                 <button className="ll-ghost small" onClick={copySummary}>
                   {copyState === "summary" ? t.share.summaryCopied : t.share.summaryDefault}
                 </button>
+                <button className="ll-ghost small" onClick={toggleQr}>
+                  {showQr ? t.qr.hide : t.qr.show}
+                </button>
               </div>
+
+              {showQr && qrDataUrl && (
+                <div className="ll-qr-panel">
+                  <img src={qrDataUrl} alt="QR code linking to this result" width={160} height={160} />
+                  <button className="ll-ghost small" onClick={downloadQr}>{t.qr.download}</button>
+                </div>
+              )}
 
               {result.status === "not_found" && result.suggestions.length > 0 && (
                 <div className="ll-suggest">
@@ -526,6 +646,11 @@ export default function App() {
                     {t.plan.reminderBtn}
                   </button>
                 )}
+                {catKey !== "invalid" && (
+                  <button className="ll-ghost" onClick={downloadSummaryPdf}>
+                    {t.pdf.downloadSummary}
+                  </button>
+                )}
               </div>
 
               {catKey !== "invalid" && (
@@ -561,6 +686,37 @@ export default function App() {
                 </div>
               )}
 
+              {catKey !== "invalid" && (
+                <div className="ll-notice">
+                  <h2 className="ll-h2">{t.notice.heading}</h2>
+                  <p className="ll-chat-sub">{t.notice.sub}</p>
+
+                  <label className="ll-notice-upload">
+                    <input type="file" accept="image/*" onChange={handleNoticeFile} hidden />
+                    {noticePreview ? (
+                      <img src={noticePreview} alt="Uploaded notice preview" className="ll-notice-preview" />
+                    ) : (
+                      <span>{t.notice.upload}</span>
+                    )}
+                  </label>
+
+                  {noticeFile && (
+                    <button
+                      className="ll-primary escalate"
+                      onClick={explainNotice}
+                      disabled={noticeLoading || !isOnline}
+                      style={{ marginTop: 12 }}
+                    >
+                      {!isOnline ? t.notice.offline : noticeLoading ? t.notice.explaining : t.notice.explain}
+                    </button>
+                  )}
+
+                  {noticeErr && <p className="ll-err">{noticeErr}</p>}
+
+                  {noticeExplanation && <p className="ll-notice-explanation">{noticeExplanation}</p>}
+                </div>
+              )}
+
               {atRisk && (
                 <div className="ll-letter">
                   <h2 className="ll-h2">{t.letter.heading}</h2>
@@ -593,6 +749,7 @@ export default function App() {
                       <div className="ll-letter-actions">
                         <button className="ll-ghost" onClick={copyLetter}>{t.letter.copy}</button>
                         <button className="ll-ghost" onClick={emailLetter}>{t.letter.email}</button>
+                        <button className="ll-ghost" onClick={() => downloadLetterPdf(letter, t.letter.heading)}>{t.pdf.downloadLetter}</button>
                       </div>
 
                       <div className="ll-followup">
@@ -641,6 +798,7 @@ export default function App() {
                             <div className="ll-letter-actions">
                               <button className="ll-ghost" onClick={copyEscalation}>{t.letter.copy}</button>
                               <button className="ll-ghost" onClick={emailEscalation}>{t.letter.email}</button>
+                              <button className="ll-ghost" onClick={() => downloadLetterPdf(escalationLetter, t.letter.heading)}>{t.pdf.downloadLetter}</button>
                             </div>
                             {escalationSuggestion && (
                               <p className="ll-next-step">

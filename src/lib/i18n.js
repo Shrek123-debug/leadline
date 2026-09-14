@@ -89,6 +89,24 @@ export const STRINGS = {
       error: "Couldn't get an answer just now. Try again.",
       offline: "Requires an internet connection",
     },
+    notice: {
+      heading: "Got a letter about your water?",
+      sub: "Upload a photo of a city notice, a water test result, or a response from your landlord — we'll explain it in plain language.",
+      upload: "Upload a photo",
+      explain: "Explain this",
+      explaining: "Reading…",
+      error: "Couldn't read that just now. Try again.",
+      offline: "Requires an internet connection",
+    },
+    pdf: {
+      downloadLetter: "Download as PDF",
+      downloadSummary: "Download one-page summary (PDF)",
+    },
+    qr: {
+      show: "Show QR code",
+      hide: "Hide QR code",
+      download: "Download QR code",
+    },
     footer: {
       attribution:
         "Data: Chicago Dept. of Water Management service line inventory (April 2025), as cleaned and geocoded by",
@@ -216,6 +234,24 @@ export const STRINGS = {
       error: "No se pudo obtener una respuesta en este momento. Intente de nuevo.",
       offline: "Requiere conexión a internet",
     },
+    notice: {
+      heading: "¿Recibió una carta sobre su agua?",
+      sub: "Suba una foto de un aviso de la ciudad, un resultado de prueba de agua, o una respuesta de su arrendador — la explicaremos en lenguaje sencillo.",
+      upload: "Subir una foto",
+      explain: "Explicar esto",
+      explaining: "Leyendo…",
+      error: "No se pudo leer eso en este momento. Intente de nuevo.",
+      offline: "Requiere conexión a internet",
+    },
+    pdf: {
+      downloadLetter: "Descargar como PDF",
+      downloadSummary: "Descargar resumen de una página (PDF)",
+    },
+    qr: {
+      show: "Mostrar código QR",
+      hide: "Ocultar código QR",
+      download: "Descargar código QR",
+    },
     footer: {
       attribution:
         "Datos: inventario de líneas de servicio del Departamento de Manejo de Agua de Chicago (abril de 2025), depurado y geocodificado por",
@@ -284,7 +320,18 @@ export function contextSentence(lang, name, pct, citywidePct) {
   return `${base} — about the same as the citywide rate.`;
 }
 
-/** Builds the tailored action-plan step list for the given language + situation. */
+/** Rules-based priority level — no AI, just clear logic a judge can read at a glance. */
+export function priorityLevel(catKey, kids, pregnant) {
+  const vulnerable = kids || pregnant;
+  if (catKey === "lead" || catKey === "galvanized") return vulnerable ? "high" : "medium";
+  if (catKey === "suspected" || catKey === "notfound") return vulnerable ? "medium" : "low";
+  return "low"; // nonlead
+}
+
+export const PRIORITY_LABELS = {
+  en: { high: "High priority", medium: "Medium priority", low: "Lower priority" },
+  es: { high: "Prioridad alta", medium: "Prioridad media", low: "Prioridad baja" },
+};
 export function actionPlanSteps(lang, { catKey, kids, pregnant, tenure }) {
   if (!catKey || catKey === "invalid") return [];
   const steps = [];
