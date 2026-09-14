@@ -66,6 +66,12 @@ body{margin:0;}
 .ll-multi-note{font-size:13.5px;color:var(--warn);background:#fdf3e2;border:1px solid #f0d9ab;
   border-radius:3px;padding:10px 14px;margin:14px 0 0;}
 
+.ll-verdict-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.ll-snapshot-tag{font-size:11.5px;color:var(--muted);background:#fff;border:1px solid var(--line);
+  border-radius:100px;padding:3px 10px;white-space:nowrap;}
+.ll-share-row{display:flex;gap:10px;margin-top:14px;}
+.ll-ghost.small{font-size:12.5px;padding:7px 13px;margin-top:0;}
+
 .ll-parts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;}
 .ll-part{border:1px solid var(--line);border-radius:3px;padding:13px;background:#fff;}
 .ll-part-name{font-size:12px;color:var(--muted);}

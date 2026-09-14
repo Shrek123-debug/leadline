@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { lookupAddress, worstEntry, MATERIAL_LABELS, CLASS_LABELS } from "./lib/lookup.js";
 
+const DATA_SNAPSHOT = "April 2025";
+
 const CATEGORY = {
   lead: {
     label: "Lead",
@@ -71,7 +73,10 @@ export default function App() {
   const [letterLoading, setLetterLoading] = useState(false);
   const [letterErr, setLetterErr] = useState("");
 
+  const [copyState, setCopyState] = useState(""); // "link" | "summary" | ""
+
   const resultRef = useRef(null);
+  const autoRanFromUrl = useRef(false);
 
   useEffect(() => {
     fetch("/data/service-lines.json")
@@ -88,7 +93,25 @@ export default function App() {
       .then((r) => (r.ok ? r.json() : null))
       .then(setCommunityStats)
       .catch(() => setCommunityStats(null));
+
+    // If someone opened a shared link (?address=...), pre-fill it so the
+    // lookup can run automatically once the dataset finishes loading.
+    const params = new URLSearchParams(window.location.search);
+    const shared = params.get("address");
+    if (shared) setAddress(shared);
   }, []);
+
+  // Auto-run the lookup once from a shared link, as soon as the dataset is ready.
+  useEffect(() => {
+    if (dataset && address && !autoRanFromUrl.current) {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("address")) {
+        autoRanFromUrl.current = true;
+        runLookup();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataset]);
 
   function runLookup() {
     if (!dataset) return;
@@ -201,6 +224,26 @@ export default function App() {
     window.location.href = `mailto:?subject=${subject}&body=${encodeURIComponent(letter)}`;
   }
 
+  function shareLink() {
+    const url = `${window.location.origin}${window.location.pathname}?address=${encodeURIComponent(address)}`;
+    navigator.clipboard?.writeText(url);
+    setCopyState("link");
+    setTimeout(() => setCopyState(""), 2000);
+  }
+
+  function copySummary() {
+    const lines = [`LeadLine result for ${address}:`, `${cat.label} — ${cat.headline}`];
+    if (areaInfo && citywide) {
+      lines.push(
+        `In ${areaInfo.name}, ${areaInfo.pctRequiresReplacement}% of service lines require replacement (citywide: ${citywide.pctRequiresReplacement}%).`
+      );
+    }
+    lines.push(`Data as of ${DATA_SNAPSHOT}. Checked via LeadLine.`);
+    navigator.clipboard?.writeText(lines.join("\n"));
+    setCopyState("summary");
+    setTimeout(() => setCopyState(""), 2000);
+  }
+
   return (
     <div className="ll-root">
       <header className="ll-head">
@@ -267,9 +310,21 @@ export default function App() {
       {result && cat && (
         <section className="ll-result" ref={resultRef}>
           <div className={"ll-verdict tone-" + cat.tone}>
-            <div className="ll-verdict-word">{cat.label}</div>
+            <div className="ll-verdict-top">
+              <div className="ll-verdict-word">{cat.label}</div>
+              <span className="ll-snapshot-tag">Data as of {DATA_SNAPSHOT}</span>
+            </div>
             <p className="ll-verdict-head">{cat.headline}</p>
             {cat.body && <p className="ll-verdict-body">{cat.body}</p>}
+          </div>
+
+          <div className="ll-share-row">
+            <button className="ll-ghost small" onClick={shareLink}>
+              {copyState === "link" ? "Link copied!" : "Share this result"}
+            </button>
+            <button className="ll-ghost small" onClick={copySummary}>
+              {copyState === "summary" ? "Copied!" : "Copy summary"}
+            </button>
           </div>
 
           {result.status === "not_found" && result.suggestions.length > 0 && (
