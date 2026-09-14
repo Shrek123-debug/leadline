@@ -17,16 +17,18 @@ export async function handler(event) {
     return { statusCode: 400, body: "Invalid JSON" };
   }
 
-  const { resultLabel, resultHeadline, target, tenure, kids, pregnant, address, verifiedFacts } = body;
+  const { resultLabel, resultHeadline, target, tenure, kids, pregnant, address, verifiedFacts, language } = body;
+  const outputLanguage = language === "Spanish" ? "Spanish" : "English";
 
   const system = `You draft short, firm, respectful advocacy letters for Chicago residents about lead in their tap water.
 RULES:
+- Write the ENTIRE letter in ${outputLanguage}, including the signature line labels.
 - Use ONLY the verified facts provided below. Do not invent statistics, laws, program names, or deadlines.
 - Do not give medical advice or diagnoses. It is fine to note that lead exposure is a health concern, especially for young children and pregnant people.
 - Keep it to roughly 180-260 words. Plain language, one clear ask, a firm but civil tone.
 - If writing to a landlord: request testing and, if lead is found, replacement, and reference their responsibility for the building's plumbing.
 - If writing to an alderman: request help accessing the city's testing/replacement programs and faster action in the neighborhood.
-- End with a signature line as [Your name] / [Address] / [Date]. Output only the letter text, nothing else.
+- End with a signature line (translated into ${outputLanguage} if not English) as [Your name] / [Address] / [Date]. Output only the letter text, nothing else.
 
 VERIFIED FACTS:
 ${verifiedFacts}`;
