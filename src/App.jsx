@@ -58,6 +58,7 @@ const VERIFIED_FACTS = `
 export default function App() {
   const [dataset, setDataset] = useState(null);
   const [dataError, setDataError] = useState(false);
+  const [communityStats, setCommunityStats] = useState(null);
 
   const [address, setAddress] = useState("");
   const [result, setResult] = useState(null);
@@ -80,6 +81,13 @@ export default function App() {
       })
       .then(setDataset)
       .catch(() => setDataError(true));
+
+    // Small file (~12KB) — failing quietly here just means the context
+    // line and comparison chart don't show, the core app still works.
+    fetch("/data/community-stats.json")
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setCommunityStats)
+      .catch(() => setCommunityStats(null));
   }, []);
 
   function runLookup() {
@@ -92,6 +100,12 @@ export default function App() {
   }
 
   const worst = result?.status === "found" ? worstEntry(result.entries) : null;
+
+  const areaInfo =
+    result?.status === "found" && communityStats && result.area != null
+      ? communityStats.areas[String(result.area)]
+      : null;
+  const citywide = communityStats?.citywide;
   const catKey = worst ? CLASS_LABELS[worst.c] : result?.status === "not_found" ? "notfound" : result?.status === "invalid" ? "invalid" : null;
   const cat = catKey ? CATEGORY[catKey] : null;
   const atRisk = catKey && catKey !== "nonlead" && catKey !== "invalid";
@@ -287,6 +301,28 @@ export default function App() {
             </>
           )}
 
+          {areaInfo && citywide && (
+            <div className="ll-context">
+              <h2 className="ll-h2">Your neighborhood, in context</h2>
+              <p className="ll-context-line">
+                In <strong>{areaInfo.name}</strong>, <strong>{areaInfo.pctRequiresReplacement}%</strong> of service
+                lines require replacement
+                {areaInfo.pctRequiresReplacement > citywide.pctRequiresReplacement
+                  ? ` — higher than the citywide rate of ${citywide.pctRequiresReplacement}%.`
+                  : areaInfo.pctRequiresReplacement < citywide.pctRequiresReplacement
+                  ? ` — lower than the citywide rate of ${citywide.pctRequiresReplacement}%.`
+                  : ` — about the same as the citywide rate.`}
+              </p>
+              <CompareBar label={areaInfo.name} pct={areaInfo.pctRequiresReplacement} />
+              <CompareBar label="Chicago citywide" pct={citywide.pctRequiresReplacement} muted />
+              <p className="ll-context-sub">
+                {areaInfo.pctPoverty}% poverty rate · {areaInfo.pctMinority}% minority population · median household
+                income ${areaInfo.medianIncome.toLocaleString()}. Chicago's lead pipe burden falls hardest on
+                lower-income and minority neighborhoods.
+              </p>
+            </div>
+          )}
+
           <div className="ll-plan">
             <h2 className="ll-h2">Your next steps</h2>
             <ol className="ll-steps">
@@ -346,6 +382,22 @@ export default function App() {
         <p>Lead paint, not pipes, is still the leading cause of lead poisoning in Chicago children.</p>
         <p>Privacy: your address stays on your device. Nothing is saved except when you choose to generate a letter.</p>
       </footer>
+    </div>
+  );
+}
+
+function CompareBar({ label, pct, muted }) {
+  return (
+    <div className="ll-bar-row">
+      <div className="ll-bar-label">
+        {label} <span className="ll-bar-pct">{pct}%</span>
+      </div>
+      <div className="ll-bar-track">
+        <div
+          className={"ll-bar-fill" + (muted ? " muted" : "")}
+          style={{ width: `${Math.min(pct, 100)}%` }}
+        />
+      </div>
     </div>
   );
 }

@@ -84,7 +84,8 @@ export function lookupAddress(input, dataset) {
   // 1) exact match, as typed
   const exactKey = buildKey(parsed);
   if (dataset[exactKey]) {
-    return { status: "found", entries: dataset[exactKey], matchedKey: exactKey };
+    const rec = dataset[exactKey];
+    return { status: "found", entries: rec.e, area: rec.a, matchedKey: exactKey };
   }
 
   // 2) retry without street type (city data is inconsistent about suffixes)
@@ -93,7 +94,10 @@ export function lookupAddress(input, dataset) {
     const hit = Object.keys(dataset).find(
       (k) => k.startsWith(`${parsed.num} ${parsed.dir}`.trim()) && k.includes(parsed.name)
     );
-    if (hit) return { status: "found", entries: dataset[hit], matchedKey: hit };
+    if (hit) {
+      const rec = dataset[hit];
+      return { status: "found", entries: rec.e, area: rec.a, matchedKey: hit };
+    }
     void noTypeKey; // reserved for future fuzzy pass
   }
 
