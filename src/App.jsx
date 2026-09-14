@@ -33,6 +33,11 @@ export default function App() {
   const [letterLoading, setLetterLoading] = useState(false);
   const [letterErr, setLetterErr] = useState("");
 
+  const [extraNote, setExtraNote] = useState("");
+  const [escalationLetter, setEscalationLetter] = useState("");
+  const [escalationLoading, setEscalationLoading] = useState(false);
+  const [escalationErr, setEscalationErr] = useState("");
+
   const [copyState, setCopyState] = useState(""); // "link" | "summary" | ""
   const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
 
@@ -92,6 +97,9 @@ export default function App() {
     setResult(r);
     setLetter("");
     setLetterErr("");
+    setEscalationLetter("");
+    setEscalationErr("");
+    setExtraNote("");
     setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
   }
 
@@ -166,6 +174,45 @@ export default function App() {
     }
   }
 
+  const escalationTarget = target === "landlord" ? "alderman" : "complaint";
+
+  async function generateEscalation() {
+    if (!isOnline) return;
+    setEscalationLoading(true);
+    setEscalationErr("");
+    setEscalationLetter("");
+
+    const situation = {
+      resultLabel: cat.label,
+      resultHeadline: cat.headline,
+      target: escalationTarget,
+      tenure,
+      kids,
+      pregnant,
+      address,
+      language: lang === "es" ? "Spanish" : "English",
+      stage: "escalation",
+      extra: extraNote,
+      verifiedFacts: VERIFIED_FACTS,
+    };
+
+    try {
+      const res = await fetch("/.netlify/functions/generate-letter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(situation),
+      });
+      if (!res.ok) throw new Error("bad response");
+      const data = await res.json();
+      if (!data.letter) throw new Error("empty");
+      setEscalationLetter(data.letter);
+    } catch (e) {
+      setEscalationErr(t.letter.error);
+    } finally {
+      setEscalationLoading(false);
+    }
+  }
+
   function copyLetter() {
     navigator.clipboard?.writeText(letter);
   }
@@ -174,6 +221,44 @@ export default function App() {
       target === "landlord" ? "Request: test our water for lead" : "Request: help with lead pipe testing in our neighborhood"
     );
     window.location.href = `mailto:?subject=${subject}&body=${encodeURIComponent(letter)}`;
+  }
+
+  function copyEscalation() {
+    navigator.clipboard?.writeText(escalationLetter);
+  }
+  function emailEscalation() {
+    const subject = encodeURIComponent(
+      escalationTarget === "alderman"
+        ? "Follow-up: still need our water tested for lead"
+        : "311 complaint: unresolved lead service line"
+    );
+    window.location.href = `mailto:?subject=${subject}&body=${encodeURIComponent(escalationLetter)}`;
+  }
+
+  function downloadFollowupReminder() {
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + 14);
+    const stamp = targetDate.toISOString().slice(0, 10).replace(/-/g, "") + "T090000";
+    const ics = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//LeadLine//Chicago//EN",
+      "BEGIN:VEVENT",
+      "UID:leadline-followup-" + Date.now() + "@leadline",
+      "SUMMARY:Check for a response about your lead pipe letter (LeadLine)",
+      "DTSTART:" + stamp,
+      "DTEND:" + stamp,
+      "DESCRIPTION:It's been about two weeks since you sent your letter. If you haven't heard back, open LeadLine and generate an escalation letter.",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+    const blob = new Blob([ics], { type: "text/calendar" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "followup-reminder.ics";
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function shareLink() {
@@ -376,6 +461,57 @@ export default function App() {
                       <div className="ll-letter-actions">
                         <button className="ll-ghost" onClick={copyLetter}>{t.letter.copy}</button>
                         <button className="ll-ghost" onClick={emailLetter}>{t.letter.email}</button>
+                      </div>
+
+                      <div className="ll-followup">
+                        <h3 className="ll-followup-heading">{t.letter.followupHeading}</h3>
+                        <p className="ll-followup-sub">{t.letter.followupSub}</p>
+
+                        <button className="ll-ghost" onClick={downloadFollowupReminder}>
+                          {t.letter.reminderBtn}
+                        </button>
+
+                        <label className="ll-extra-label">{t.letter.extraLabel}</label>
+                        <textarea
+                          className="ll-extra-input"
+                          value={extraNote}
+                          onChange={(e) => setExtraNote(e.target.value)}
+                          placeholder={t.letter.extraPlaceholder}
+                          rows={2}
+                        />
+
+                        <button
+                          className="ll-primary escalate"
+                          onClick={generateEscalation}
+                          disabled={escalationLoading || !isOnline}
+                        >
+                          {!isOnline
+                            ? t.letter.offline
+                            : escalationLoading
+                            ? t.letter.escalating
+                            : escalationLetter
+                            ? t.letter.escalateAgain
+                            : escalationTarget === "alderman"
+                            ? t.letter.escalateToAlderman
+                            : t.letter.escalateToComplaint}
+                        </button>
+
+                        {escalationErr && <p className="ll-err">{escalationErr}</p>}
+
+                        {escalationLetter && (
+                          <>
+                            <textarea
+                              className="ll-textarea"
+                              value={escalationLetter}
+                              onChange={(e) => setEscalationLetter(e.target.value)}
+                              rows={16}
+                            />
+                            <div className="ll-letter-actions">
+                              <button className="ll-ghost" onClick={copyEscalation}>{t.letter.copy}</button>
+                              <button className="ll-ghost" onClick={emailEscalation}>{t.letter.email}</button>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </>
                   )}

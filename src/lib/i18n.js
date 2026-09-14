@@ -68,6 +68,15 @@ export const STRINGS = {
       error: "Couldn't generate the letter just now. Check your connection and try again.",
       copy: "Copy",
       email: "Open in email",
+      followupHeading: "Didn't hear back?",
+      followupSub: "Give it about two weeks, then escalate if nothing's changed.",
+      reminderBtn: "Remind me in 2 weeks to check back",
+      extraLabel: "Anything to add for the follow-up? (optional)",
+      extraPlaceholder: "e.g. the date you sent the first letter, or how they responded",
+      escalateToAlderman: "Generate escalation letter to my alderman",
+      escalateToComplaint: "Generate a formal 311 complaint",
+      escalating: "Writing your escalation letter…",
+      escalateAgain: "Rewrite escalation letter",
     },
     footer: {
       attribution:
@@ -172,6 +181,15 @@ export const STRINGS = {
       error: "No se pudo generar la carta en este momento. Revise su conexión e intente de nuevo.",
       copy: "Copiar",
       email: "Abrir en correo",
+      followupHeading: "¿No ha recibido respuesta?",
+      followupSub: "Espere unas dos semanas y luego escale si nada ha cambiado.",
+      reminderBtn: "Recordarme revisar en 2 semanas",
+      extraLabel: "¿Algo que agregar para el seguimiento? (opcional)",
+      extraPlaceholder: "por ejemplo, la fecha en que envió la primera carta, o cómo respondieron",
+      escalateToAlderman: "Generar carta de escalamiento a mi concejal",
+      escalateToComplaint: "Generar una queja formal al 311",
+      escalating: "Escribiendo su carta de escalamiento…",
+      escalateAgain: "Reescribir carta de escalamiento",
     },
     footer: {
       attribution:

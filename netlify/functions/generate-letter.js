@@ -17,8 +17,16 @@ export async function handler(event) {
     return { statusCode: 400, body: "Invalid JSON" };
   }
 
-  const { resultLabel, resultHeadline, target, tenure, kids, pregnant, address, verifiedFacts, language } = body;
+  const { resultLabel, resultHeadline, target, tenure, kids, pregnant, address, verifiedFacts, language, stage, extra } = body;
   const outputLanguage = language === "Spanish" ? "Spanish" : "English";
+  const isEscalation = stage === "escalation";
+
+  const recipientDescriptions = {
+    landlord: "the resident's landlord/property manager",
+    alderman: "the resident's alderman (city council member)",
+    complaint: "a formal complaint record to file with the City of Chicago's 311 service (not a named individual)",
+  };
+  const recipient = recipientDescriptions[target] || recipientDescriptions.landlord;
 
   const system = `You draft short, firm, respectful advocacy letters for Chicago residents about lead in their tap water.
 RULES:
@@ -28,6 +36,8 @@ RULES:
 - Keep it to roughly 180-260 words. Plain language, one clear ask, a firm but civil tone.
 - If writing to a landlord: request testing and, if lead is found, replacement, and reference their responsibility for the building's plumbing.
 - If writing to an alderman: request help accessing the city's testing/replacement programs and faster action in the neighborhood.
+- If this is a 311 complaint record rather than a letter to a person: skip a "Dear ___" salutation, write it as a clear factual complaint report (what's happening, at what address, what's being requested), and still close with the resident's contact info as a signature block.
+${isEscalation ? `- This is a FOLLOW-UP. An earlier request was already sent about two weeks ago and has NOT received a response. Say so plainly and firmly, without inventing specifics about what happened — only use what's in the resident's own note below, if anything. The tone should be noticeably firmer and more urgent than a first request, while staying respectful and factual.` : ""}
 - End with a signature line (translated into ${outputLanguage} if not English) as [Your name] / [Address] / [Date]. Output only the letter text, nothing else.
 
 VERIFIED FACTS:
@@ -35,11 +45,13 @@ ${verifiedFacts}`;
 
   const situation = [
     `Water service line result: ${resultLabel} (${resultHeadline})`,
-    `Recipient: ${target === "landlord" ? "the resident's landlord/property manager" : "the resident's alderman (city council member)"}`,
+    `Recipient: ${recipient}`,
     `The resident ${tenure === "rent" ? "RENTS" : "OWNS"} their home.`,
     kids ? "There are young children in the home." : "",
     pregnant ? "Someone in the home is pregnant." : "",
     `Address searched: ${address || "(Chicago address)"}`,
+    isEscalation ? "This is a follow-up after roughly two weeks of no response to an earlier request." : "",
+    extra ? `Resident's own note about what's happened since: ${extra}` : "",
   ]
     .filter(Boolean)
     .join("\n");
