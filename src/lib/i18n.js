@@ -49,6 +49,7 @@ export const STRINGS = {
     context: {
       heading: "Your neighborhood, in context",
       cityLabel: "Chicago citywide",
+      viewOnMap: "View my neighborhood on the map",
       subFacts: (pov, min, income) =>
         `${pov}% poverty rate · ${min}% minority population · median household income $${income.toLocaleString()}. Chicago's lead pipe burden falls hardest on lower-income and minority neighborhoods.`,
     },
@@ -102,6 +103,9 @@ export const STRINGS = {
       sub: "The 20 Chicago community areas with the highest share of lead service lines needing replacement.",
       back: "← Back to address lookup",
       citywideAvg: (pct) => `Citywide average: ${pct}%`,
+      legendLow: "Lower risk",
+      legendHigh: "Higher risk",
+      popupPct: "require replacement",
     },
     offlineBanner: "You're offline. Address lookup still works — the letter generator needs a connection.",
     categories: {
@@ -172,6 +176,7 @@ export const STRINGS = {
     context: {
       heading: "Su vecindario, en contexto",
       cityLabel: "Chicago (toda la ciudad)",
+      viewOnMap: "Ver mi vecindario en el mapa",
       subFacts: (pov, min, income) =>
         `${pov}% de tasa de pobreza · ${min}% de población minoritaria · ingreso familiar medio de $${income.toLocaleString()}. La carga de las tuberías de plomo en Chicago recae con más fuerza en los vecindarios de bajos ingresos y minoritarios.`,
     },
@@ -225,6 +230,9 @@ export const STRINGS = {
       sub: "Las 20 áreas comunitarias de Chicago con la mayor proporción de líneas de servicio de plomo que necesitan reemplazo.",
       back: "← Volver a la búsqueda de dirección",
       citywideAvg: (pct) => `Promedio de toda la ciudad: ${pct}%`,
+      legendLow: "Riesgo menor",
+      legendHigh: "Riesgo mayor",
+      popupPct: "requieren reemplazo",
     },
     offlineBanner: "Está sin conexión. La búsqueda de direcciones sigue funcionando — la carta necesita conexión a internet.",
     categories: {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { lookupAddress, worstEntry, MATERIAL_LABELS, CLASS_LABELS } from "./lib/lookup.js";
 import { STRINGS, TONES, contextSentence, actionPlanSteps } from "./lib/i18n.js";
+import ChicagoMap from "./components/ChicagoMap.jsx";
 
 const VERIFIED_FACTS = `
 - Chicago has more lead service lines than any U.S. city (an estimated 400,000+ still in the ground).
@@ -21,6 +22,8 @@ export default function App() {
   const [dataset, setDataset] = useState(null);
   const [dataError, setDataError] = useState(false);
   const [communityStats, setCommunityStats] = useState(null);
+  const [areasGeojson, setAreasGeojson] = useState(null);
+  const [highlightArea, setHighlightArea] = useState(null);
 
   const [address, setAddress] = useState("");
   const [result, setResult] = useState(null);
@@ -65,6 +68,13 @@ export default function App() {
       .then((r) => (r.ok ? r.json() : null))
       .then(setCommunityStats)
       .catch(() => setCommunityStats(null));
+
+    // ~200KB gzip — the map's boundary shapes. Also non-critical if it
+    // fails; the compare view just shows the ranked list without a map.
+    fetch("/data/community-areas.geojson")
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setAreasGeojson)
+      .catch(() => setAreasGeojson(null));
 
     // If someone opened a shared link (?address=...), pre-fill it so the
     // lookup can run automatically once the dataset finishes loading.
@@ -377,7 +387,13 @@ export default function App() {
       {!isOnline && <div className="ll-offline-banner">{t.offlineBanner}</div>}
 
       {view === "compare" ? (
-        <CompareView t={t} communityStats={communityStats} onBack={() => setView("lookup")} />
+        <CompareView
+          t={t}
+          communityStats={communityStats}
+          areasGeojson={areasGeojson}
+          highlightArea={highlightArea}
+          onBack={() => setView("lookup")}
+        />
       ) : (
         <>
           <section className="ll-hero">
@@ -486,6 +502,15 @@ export default function App() {
                   <p className="ll-context-sub">
                     {t.context.subFacts(areaInfo.pctPoverty, areaInfo.pctMinority, areaInfo.medianIncome)}
                   </p>
+                  <button
+                    className="ll-ghost small"
+                    onClick={() => {
+                      setHighlightArea(result.area);
+                      setView("compare");
+                    }}
+                  >
+                    {t.context.viewOnMap}
+                  </button>
                 </div>
               )}
 
@@ -651,7 +676,9 @@ export default function App() {
   );
 }
 
-function CompareView({ t, communityStats, onBack }) {
+function CompareView({ t, communityStats, areasGeojson, highlightArea, onBack }) {
+  const [selected, setSelected] = useState(null); // area number clicked on the map
+
   if (!communityStats) {
     return (
       <section className="ll-compare">
@@ -665,12 +692,36 @@ function CompareView({ t, communityStats, onBack }) {
     .sort((a, b) => b.pctRequiresReplacement - a.pctRequiresReplacement)
     .slice(0, 20);
 
+  const selectedInfo = selected != null ? communityStats.areas[String(selected)] : null;
+
   return (
     <section className="ll-compare">
       <button className="ll-ghost small" onClick={onBack}>{t.compare.back}</button>
       <h1 className="ll-h1" style={{ fontSize: 30, marginTop: 18 }}>{t.compare.heading}</h1>
       <p className="ll-sub">{t.compare.sub}</p>
       <p className="ll-compare-avg">{t.compare.citywideAvg(communityStats.citywide.pctRequiresReplacement)}</p>
+
+      {areasGeojson ? (
+        <ChicagoMap
+          geojson={areasGeojson}
+          highlightArea={selected ?? highlightArea}
+          onSelectArea={(props) => setSelected(props.area)}
+          labels={{ legendLow: t.compare.legendLow, legendHigh: t.compare.legendHigh, popupPct: t.compare.popupPct }}
+        />
+      ) : (
+        <p style={{ color: "#8a9b94", fontSize: 13.5 }}>…</p>
+      )}
+
+      {selectedInfo && (
+        <div className="ll-selected-panel">
+          <h3 className="ll-selected-name">{selectedInfo.name}</h3>
+          <CompareBar label={selectedInfo.name} pct={selectedInfo.pctRequiresReplacement} />
+          <CompareBar label={t.context.cityLabel} pct={communityStats.citywide.pctRequiresReplacement} muted />
+          <p className="ll-context-sub">
+            {t.context.subFacts(selectedInfo.pctPoverty, selectedInfo.pctMinority, selectedInfo.medianIncome)}
+          </p>
+        </div>
+      )}
 
       <div className="ll-compare-list">
         {ranked.map((area, i) => (
